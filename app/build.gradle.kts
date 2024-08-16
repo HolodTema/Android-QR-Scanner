@@ -18,10 +18,17 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+
+
+        //there were some problems of using built-in debuggable=true in buildTypes
+        //That is why I added a custom field to BuildConfig
+        //(look 3-y.o. gradle error)
+        buildConfigField("Boolean", "IS_DEBUGGABLE", "true")
     }
 
     buildTypes {
         release {
+
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -38,6 +45,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.1"
@@ -50,6 +58,14 @@ android {
 }
 
 dependencies {
+    //timber impl
+    implementation(libs.timber)
+
+    //ViewModel impl
+    implementation(libs.androidx.lifecycle.viewmodel)
+
+    //Zxing QR scan library
+    implementation(libs.zxing)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
