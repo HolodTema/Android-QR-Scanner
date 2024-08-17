@@ -58,6 +58,9 @@ android {
 }
 
 dependencies {
+    //liveData impl
+    implementation(libs.androidx.runtime.livedata)
+
     //timber impl
     implementation(libs.timber)
 

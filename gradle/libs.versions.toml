@@ -11,8 +11,10 @@ composeBom = "2024.04.01"
 zxing = "4.3.0"
 viewModel = "2.8.4"
 timber = "5.0.1"
+liveData = "1.6.8"
 
 [libraries]
+androidx-runtime-livedata = { group = "androidx.compose.runtime", name = "runtime-livedata", version.ref = "liveData"}
 timber = { group = "com.jakewharton.timber", name = "timber", version.ref = "timber"}
 androidx-lifecycle-viewmodel = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "viewModel"}
 zxing = {group = "com.journeyapps", name = "zxing-android-embedded", version.ref = "zxing"}
