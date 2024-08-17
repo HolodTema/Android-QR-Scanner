@@ -127,6 +127,11 @@ class MainActivity : ComponentActivity() {
                 )
                 IconButton(
                     onClick = {
+                        if(viewModel.currentQRInfo.value.info.isNotEmpty()) {
+                            viewModel.onCopyButtonClickedListener(applicationContext, viewModel.currentQRInfo.value.info) {
+                                Toast.makeText(this@MainActivity, "Copied!", Toast.LENGTH_SHORT).show()
+                            }
+                        }
 
                     },
                 ) {
