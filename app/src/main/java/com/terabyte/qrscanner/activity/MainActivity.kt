@@ -1,11 +1,13 @@
 package com.terabyte.qrscanner.activity
 
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -48,6 +50,22 @@ class MainActivity : ComponentActivity() {
         viewModel.onScannedUsingCamera(result)
     }
 
+    private val launcherScanUsingGallery = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()) {
+        if(it.resultCode== RESULT_OK) {
+            if(it.data==null || it.data?.data==null) {
+                toastNothingWasChosen()
+            }
+            else {
+                viewModel.onImagePickedFromGalleryToScan(applicationContext, it.data!!.data!!)
+            }
+        }
+        else {
+            toastNothingWasChosen()
+        }
+    }
+
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -66,6 +84,9 @@ class MainActivity : ComponentActivity() {
         this.viewModel = viewModel
 
         viewModel.liveDataToastNothingScannedCamera.observe(activity) {
+            if(it) Toast.makeText(activity, "Nothing was scanned.", Toast.LENGTH_SHORT).show()
+        }
+        viewModel.liveDataToastNothingScannedGallery.observe(activity) {
             if(it) Toast.makeText(activity, "Nothing was scanned.", Toast.LENGTH_SHORT).show()
         }
 
@@ -91,7 +112,7 @@ class MainActivity : ComponentActivity() {
                 )
                 CardScanNewGallery(
                     viewModel = viewModel,
-                    launcherFromGallery = launcherScanUsingCamera
+                    launcherFromGallery = launcherScanUsingGallery
                 )
             }
         }
@@ -199,14 +220,18 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    private fun CardScanNewGallery(viewModel: MainViewModel, launcherFromGallery: ActivityResultLauncher<ScanOptions>) {
+    private fun CardScanNewGallery(viewModel: MainViewModel, launcherFromGallery: ActivityResultLauncher<Intent>) {
         Card(
             modifier = Modifier
                 .width(120.dp)
                 .height(120.dp)
                 .padding(8.dp)
                 .clickable {
-                    launcherFromGallery.launch(viewModel.getScanOptions())
+                    val intent = Intent()
+                    intent.type = "image/*"
+                    intent.action = Intent.ACTION_GET_CONTENT
+                    val intentChooser = Intent.createChooser(intent, "Choose image with QR code:")
+                    launcherScanUsingGallery.launch(intentChooser)
                 }
         ) {
             Text(
@@ -225,6 +250,10 @@ class MainActivity : ComponentActivity() {
                     .padding(bottom = 16.dp, top = 8.dp)
             )
         }
+    }
+
+    private fun toastNothingWasChosen() {
+        Toast.makeText(this, "No image was picked.", Toast.LENGTH_SHORT).show()
     }
 }
 
