@@ -6,6 +6,7 @@ import android.content.Context
 import android.net.Uri
 import android.webkit.URLUtil
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.journeyapps.barcodescanner.ScanIntentResult
@@ -21,6 +22,9 @@ class MainViewModel: ViewModel() {
 
 
     val currentQRInfo = mutableStateOf<QRInfo>(QRInfo.createEmpty())
+
+    val scanHistory = mutableStateOf<List<QRInfo>?>(null)
+
 
 
     fun onScannedUsingCamera(result: ScanIntentResult) {
