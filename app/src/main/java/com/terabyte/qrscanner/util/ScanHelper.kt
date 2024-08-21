@@ -11,6 +11,7 @@ import com.google.zxing.RGBLuminanceSource
 import com.journeyapps.barcodescanner.BarcodeResult
 import com.journeyapps.barcodescanner.CaptureManager
 import com.journeyapps.barcodescanner.MixedDecoder
+import com.journeyapps.barcodescanner.ScanOptions
 import com.terabyte.qrscanner.data.QRInfo
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -34,7 +35,9 @@ object ScanHelper {
 
                     val source = RGBLuminanceSource(image.width, image.height, intArray)
                     val reader = MixedDecoder(MultiFormatReader())
-                    val result = reader.decode(source)
+                    var result = reader.decode(source)
+                    if(result==null) result = reader.decode(source)
+                    if(result.text.isEmpty() || result.text==null) throw Exception() // TODO: log it
 
                     val qrInfo = QRInfo(
                         id = 0,
@@ -51,5 +54,15 @@ object ScanHelper {
                     }
                 }
             }
+    }
+
+    fun getScanOptions(): ScanOptions {
+        return ScanOptions().apply {
+            setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+            setPrompt("Scan a QR code")
+            setCameraId(0)
+            setBeepEnabled(false)
+            setBarcodeImageEnabled(true)
+        }
     }
 }

@@ -8,6 +8,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
@@ -26,6 +27,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -45,16 +48,16 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import com.terabyte.qrscanner.R
 import com.terabyte.qrscanner.data.QRInfo
-import com.terabyte.qrscanner.ui.theme.ColorPrimary
 import com.terabyte.qrscanner.ui.theme.ColorPrimaryText
 import com.terabyte.qrscanner.ui.theme.ColorSecondaryText
-import com.terabyte.qrscanner.ui.theme.ColorText
 import com.terabyte.qrscanner.ui.theme.QRScannerTheme
+import com.terabyte.qrscanner.util.ScanHelper
 import com.terabyte.qrscanner.viewmodel.MainViewModel
 
 class MainActivity : ComponentActivity() {
@@ -69,44 +72,28 @@ class MainActivity : ComponentActivity() {
     private val launcherScanUsingGallery = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) {
-        if (it.resultCode == RESULT_OK) {
-            if (it.data == null || it.data?.data == null) {
-                toastNothingWasChosen()
-            } else {
-                viewModel.onImagePickedFromGalleryToScan(applicationContext, it.data!!.data!!)
-            }
-        } else {
-            toastNothingWasChosen()
-        }
+        viewModel.onImagePickedFromGalleryToScan(applicationContext, it)
     }
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        viewModel = ViewModelProvider(
+            this,
+            ViewModelProvider.AndroidViewModelFactory.getInstance(application)
+        )[MainViewModel::class]
+
+        registerLiveDataObservers()
+
         setContent {
             QRScannerTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { paddingVals ->
-                    MainActivityContent(this, paddingVals)
-                }
+                MainActivityContent()
             }
         }
     }
 
     @Composable
-    private fun MainActivityContent(
-        activity: MainActivity,
-        paddingVals: PaddingValues,
-        viewModel: MainViewModel = viewModel()
-    ) {
-        this.viewModel = viewModel
-
-        viewModel.liveDataToastNothingScannedCamera.observe(activity) {
-            if (it) Toast.makeText(activity, "Nothing was scanned.", Toast.LENGTH_SHORT).show()
-        }
-        viewModel.liveDataToastNothingScannedGallery.observe(activity) {
-            if (it) Toast.makeText(activity, "Nothing was scanned.", Toast.LENGTH_SHORT).show()
-        }
+    private fun MainActivityContent() {
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -121,9 +108,6 @@ class MainActivity : ComponentActivity() {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(
-                        top = paddingVals.calculateTopPadding(),
-                    )
             ) {
                 QRInfoCard()
                 LazyColumnScanHistory()
@@ -142,14 +126,8 @@ class MainActivity : ComponentActivity() {
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    CardScanNewCamera(
-                        viewModel = viewModel,
-                        launcherFromCamera = launcherScanUsingCamera,
-                    )
-                    CardScanNewGallery(
-                        viewModel = viewModel,
-                        launcherFromGallery = launcherScanUsingGallery
-                    )
+                    CardScanNewCamera()
+                    CardScanNewGallery()
                 }
             }
         }
@@ -196,7 +174,7 @@ class MainActivity : ComponentActivity() {
                         .weight(1f)
                         .padding(start = 8.dp)
                 )
-                if(qrInfo.value.info.isNotEmpty()) {
+                if (qrInfo.value.info.isNotEmpty()) {
                     IconButton(
                         onClick = {
                             viewModel.onCopyButtonClickedListener(
@@ -231,7 +209,7 @@ class MainActivity : ComponentActivity() {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            if(scanHistory.value==null) {
+            if (scanHistory.value == null) {
                 //waiting for coroutine IO process
                 CircularProgressIndicator(
                     modifier = Modifier
@@ -239,16 +217,16 @@ class MainActivity : ComponentActivity() {
                         .height(50.dp),
                     color = Color.Blue
                 )
-            }
-            else if(scanHistory.value!!.isEmpty()) {
+            } else if (scanHistory.value!!.isEmpty()) {
                 //no qr codes before
                 Text(
                     text = "Here you will se the history of scanned QR codes.",
                     color = ColorPrimaryText,
-                    fontSize = 18.sp
+                    fontSize = 18.sp,
+                    modifier = Modifier
+                        .padding(start = 32.dp, end = 32.dp)
                 )
-            }
-            else {
+            } else {
                 Text(
                     text = "Previous scan results:",
                     fontSize = 18.sp,
@@ -262,12 +240,11 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier
                         .fillMaxWidth()
                 ) {
-                    items(50) { i ->
-                        if(i%2==0) {
-                            ScanHistoryItemRight(qrInfo = QRInfo.createEmpty())
-                        }
-                        else {
-                            ScanHistoryItemLeft(qrInfo = QRInfo.createEmpty())
+                    itemsIndexed(scanHistory.value!!) { index, item ->
+                        if (index % 2 == 0) {
+                            ScanHistoryItemRight(qrInfo = item)
+                        } else {
+                            ScanHistoryItemLeft(qrInfo = item)
                         }
                         Spacer(
                             modifier = Modifier
@@ -282,17 +259,14 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    private fun CardScanNewCamera(
-        viewModel: MainViewModel,
-        launcherFromCamera: ActivityResultLauncher<ScanOptions>
-    ) {
+    private fun CardScanNewCamera() {
         Card(
             modifier = Modifier
                 .width(150.dp)
                 .height(100.dp)
                 .padding(8.dp)
                 .clickable {
-                    launcherFromCamera.launch(viewModel.getScanOptions())
+                    launcherScanUsingCamera.launch(ScanHelper.getScanOptions())
                 },
             colors = CardDefaults.cardColors(
                 containerColor = Color.Blue
@@ -319,10 +293,7 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    private fun CardScanNewGallery(
-        viewModel: MainViewModel,
-        launcherFromGallery: ActivityResultLauncher<Intent>
-    ) {
+    private fun CardScanNewGallery() {
         Card(
             modifier = Modifier
                 .width(150.dp)
@@ -380,7 +351,7 @@ class MainActivity : ComponentActivity() {
                         .fillMaxWidth(0.8f)
                 ) {
                     Text(
-                        text = if(qrInfo.info.length<20) {
+                        text = if (qrInfo.info.length < 20) {
                             qrInfo.info
                         } else {
                             qrInfo.info.substring(17) + "..."
@@ -434,7 +405,7 @@ class MainActivity : ComponentActivity() {
                             .fillMaxWidth(0.8f)
                     ) {
                         Text(
-                            text = if(qrInfo.info.length<20) {
+                            text = if (qrInfo.info.length < 20) {
                                 qrInfo.info
                             } else {
                                 qrInfo.info.substring(17) + "..."
@@ -444,7 +415,7 @@ class MainActivity : ComponentActivity() {
                             fontSize = 16.sp
                         )
                         Text(
-                            text = "Date:" + qrInfo.date,
+                            text = "Date: " + qrInfo.date,
                             color = ColorSecondaryText,
                             fontSize = 14.sp
                         )
@@ -464,10 +435,16 @@ class MainActivity : ComponentActivity() {
 
     }
 
-
-
-    private fun toastNothingWasChosen() {
-        Toast.makeText(this, "No image was picked.", Toast.LENGTH_SHORT).show()
+    private fun registerLiveDataObservers() {
+        viewModel.liveDataToastNothingScannedCamera.observe(this) {
+            if (it) Toast.makeText(this, "Nothing was scanned.", Toast.LENGTH_SHORT).show()
+        }
+        viewModel.liveDataToastNothingScannedGallery.observe(this) {
+            if (it) Toast.makeText(this, "Nothing was scanned.", Toast.LENGTH_SHORT).show()
+        }
+        viewModel.liveDataToastNothingWasChosenFromGallery.observe(this) {
+            if (it) Toast.makeText(this, "No image was picked.", Toast.LENGTH_SHORT).show()
+        }
     }
 }
 
