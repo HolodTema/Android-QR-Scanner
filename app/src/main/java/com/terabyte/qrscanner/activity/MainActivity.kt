@@ -181,8 +181,7 @@ class MainActivity : ComponentActivity() {
                                 applicationContext,
                                 viewModel.currentQRInfo.value.info
                             ) {
-                                Toast.makeText(this@MainActivity, "Copied!", Toast.LENGTH_SHORT)
-                                    .show()
+                                showToastCopied()
                             }
                         },
                     ) {
@@ -422,6 +421,9 @@ class MainActivity : ComponentActivity() {
                     }
                     IconButton(
                         onClick = {
+                            viewModel.onCopyButtonClickedListener(applicationContext, qrInfo.info) {
+                                   showToastCopied()
+                            }
                         }
                     ) {
                         Icon(
@@ -433,6 +435,10 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+    }
+
+    private fun showToastCopied() {
+        Toast.makeText(this, "Copied!", Toast.LENGTH_SHORT).show()
     }
 
     private fun registerLiveDataObservers() {

@@ -13,8 +13,10 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
 import com.journeyapps.barcodescanner.ScanIntentResult
 import com.terabyte.qrscanner.CLIPBOARD_MANAGER_LABEL
+import com.terabyte.qrscanner.ROOM_MAX_AMOUNT_QR_INFO_OBJECTS
 import com.terabyte.qrscanner.data.QRInfo
 import com.terabyte.qrscanner.data.RoomManager
+import com.terabyte.qrscanner.util.ClipboardHelper
 import com.terabyte.qrscanner.util.ScanHelper
 import timber.log.Timber
 
@@ -44,27 +46,9 @@ class MainViewModel(private val application: Application) : AndroidViewModel(app
     }
 
     fun onCopyButtonClickedListener(context: Context, stringToCopy: String, listener: () -> Unit) {
-        val clipboardManager =
-            context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        if (URLUtil.isValidUrl(stringToCopy)) {
-            try {
-                val uri = Uri.parse(stringToCopy)
-                val clipData =
-                    ClipData.newUri(context.contentResolver, CLIPBOARD_MANAGER_LABEL, uri)
-                clipboardManager.setPrimaryClip(clipData)
-            } catch (t: Throwable) {
-                //if cannot parse to uri, copy like an ordinary string
-                val clipData = ClipData.newPlainText(CLIPBOARD_MANAGER_LABEL, stringToCopy)
-                clipboardManager.setPrimaryClip(clipData)
-                Timber.w("When copy button clicked: URLUtil recognized the text as uri, but Uri.parse() not working. Copied as plain text.")
-            }
-        } else {
-            //if the qr info is not uri:
-            val clipData = ClipData.newPlainText(CLIPBOARD_MANAGER_LABEL, stringToCopy)
-            clipboardManager.setPrimaryClip(clipData)
+        ClipboardHelper.copyToClipboard(context, stringToCopy) {
+            listener()
         }
-        //listener to show toast with text kinda "Copied!" in MainActivity
-        listener()
     }
 
     fun onImagePickedFromGalleryToScan(context: Context, result: ActivityResult) {
@@ -88,6 +72,9 @@ class MainViewModel(private val application: Application) : AndroidViewModel(app
             info = contents
         )
         RoomManager.insert(application, qrInfo) {
+            if(scanHistory.value!=null && scanHistory.value!!.size>ROOM_MAX_AMOUNT_QR_INFO_OBJECTS) {
+                RoomManager.delete(application, scanHistory.value!![scanHistory.value!!.size-1]) {}
+            }
             // TODO: log it
         }
         return qrInfo

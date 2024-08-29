@@ -41,4 +41,13 @@ object RoomManager {
             }
         }
     }
+
+    fun delete(context: Context, qrInfo: QRInfo, listener: () -> Unit) {
+        CoroutineScope(Dispatchers.IO).launch {
+            getInstance(context).getQRInfoDao().delete(qrInfo)
+            CoroutineScope(Dispatchers.Main).launch {
+                listener()
+            }
+        }
+    }
 }
